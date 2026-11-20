@@ -102,6 +102,35 @@ tell you so:
 If in doubt use the installer, or use the program's own **Install to %LOCALAPPDATA%** button
 on the *Host actions* tab, which performs the same per-user install.
 
+### Why not a service?
+
+A Windows service is the obvious way to keep a helper running for every user, and it is the
+wrong tool here. Services run in **session 0**, a separate, non-interactive session with no
+desktop. Host actions work by installing a `WH_KEYBOARD_LL` hook and by injecting keys and
+programs into the *interactive* desktop — the session you actually type in. A session‑0 process
+cannot reach that desktop at all.
+
+So a service would install cleanly, start cleanly, report "running", and then silently never
+fire a single button — the worst possible failure, because it looks like success.
+
+What Rz3 does instead is what the problem actually calls for: a per‑user autostart entry
+(`HKCU\...\Run`, value `Rz3.exe --tray`) that starts in **your** session, with **your** rights.
+Consequences worth knowing:
+
+| | Service | Rz3's approach |
+|---|---|---|
+| Installs / starts | yes | yes |
+| Can hook your keyboard | **no** (session 0) | yes |
+| Can inject into your apps | **no** | yes |
+| Needs administrator | **yes** | no |
+| Runs for users who never log on | yes | no (irrelevant for a mouse) |
+
+The one thing a service gives you that this does not is "works before anyone logs in", which is
+meaningless for a per‑user input tool.
+
+The same reasoning is written into `installer/Rz3.iss` if you want the short version next to
+the code.
+
 ### First run
 
 1. Close Razer Synapse (Rz3 detects a busy device and says so in the status bar).
