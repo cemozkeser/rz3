@@ -1,4 +1,4 @@
-# Changelog
+﻿# Changelog
 
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project
@@ -7,6 +7,20 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ---
 
 ## [Unreleased]
+
+## [1.0.1] — 2026-11-20
+
+### Fixed
+
+- **A lab test could delete your host actions.** `--tabtest` flips the first configured row to
+  *Disabled* to prove that choosing Disabled really clears the stored value — and on a machine
+  with real actions in the table, that row was your action, not a scratch one. Running the test
+  silently removed it from `rz3_host.json`. Measured on a real install where `F13 -> thispc`
+  disappeared. The test now snapshots the whole table first, restores it in a `finally` block,
+  and reports `user table restored=ok` in its output. No behaviour change outside the tests.
+
+- Choosing *Disabled* still clears a row's value on purpose: that remains the documented
+  behaviour, and the test still verifies it — it just no longer damages the user's own table.
 
 ## [1.0.0] — 2026-11-20
 
@@ -63,5 +77,6 @@ model tested, unsigned binaries (SmartScreen warning), host actions need Rz3 run
 polling ceiling on this hardware, and some firmware commands simply do not exist on this
 revision and are reported as unsupported rather than faked.
 
-[Unreleased]: https://github.com/cemozkeser/rz3/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/cemozkeser/rz3/compare/v1.0.1...HEAD
 [1.0.0]: https://github.com/cemozkeser/rz3/releases/tag/v1.0.0
+[1.0.1]: https://github.com/cemozkeser/rz3/releases/tag/v1.0.1

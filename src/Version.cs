@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Reflection;
 
 namespace Rz3
@@ -23,7 +23,7 @@ namespace Rz3
     // ---------------------------------------------------------------------------------------
     public static class VersionInfo
     {
-        public const string Version = "1.0.0";
+        public const string Version = "1.0.1";
 
         // Read from the assembly attributes the build script injects (/version:1.0.0.0). Used
         // only to prove at run time that the binary and this source file agree; the constant

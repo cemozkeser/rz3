@@ -2694,6 +2694,67 @@ namespace Rz3
             catch { }
         }
 
+        // ---- test isolation ----------------------------------------------------------------
+        // The lab switches deliberately mutate state to prove things (a row flipped to
+        // Disabled, a temporary action written and read back). On a developer's own machine the
+        // state they mutate is the developer's real configuration, so every such test takes a
+        // snapshot first and puts it back afterwards. Without this, running a test cost the user
+        // their host actions - measured on 20.11.2026, where --tabtest deleted a live F13 row.
+        Dictionary<byte, HostAction[]> SnapshotHostTable()
+        {
+            Dictionary<byte, HostAction[]> copy = new Dictionary<byte, HostAction[]>();
+            foreach (KeyValuePair<byte, HostAction[]> kv in _hostTable)
+            {
+                if (kv.Value == null) { copy[kv.Key] = null; continue; }
+                HostAction[] arr = new HostAction[kv.Value.Length];
+                for (int i = 0; i < kv.Value.Length; i++)
+                    arr[i] = kv.Value[i] != null ? kv.Value[i].Clone() : null;
+                copy[kv.Key] = arr;
+            }
+            return copy;
+        }
+
+        // Restores a snapshot. clearProfile is a profile id whose array existed only because the
+        // test invented it; pass 255 to keep every profile.
+        void RestoreHostTable(Dictionary<byte, HostAction[]> snapshot, byte clearProfile)
+        {
+            _hostTable.Clear();
+            foreach (KeyValuePair<byte, HostAction[]> kv in snapshot)
+            {
+                if (kv.Key == clearProfile) continue;
+                _hostTable[kv.Key] = kv.Value;
+            }
+            SaveHostTable();
+            _hostTable.Clear();
+            LoadHostTable();
+            try { RebuildHostTable(); } catch { }
+        }
+
+        // True when the on-disk table loads back to exactly the snapshot.
+        bool VerifyHostTable(Dictionary<byte, HostAction[]> snapshot)
+        {
+            try
+            {
+                Dictionary<byte, HostAction[]> disk = new Dictionary<byte, HostAction[]>();
+                bool en;
+                if (!HostStore.Load(Application.StartupPath, disk, out en)) return false;
+                foreach (KeyValuePair<byte, HostAction[]> kv in snapshot)
+                {
+                    HostAction[] a;
+                    if (!disk.TryGetValue(kv.Key, out a)) return false;
+                    for (int i = 0; i < HostTrigger.Count; i++)
+                    {
+                        bool wantEmpty = kv.Value == null || kv.Value[i] == null || kv.Value[i].IsDisabled;
+                        bool gotEmpty = a == null || a[i] == null || a[i].IsDisabled;
+                        if (wantEmpty != gotEmpty) return false;
+                        if (!wantEmpty && (a[i].Kind != kv.Value[i].Kind || a[i].Value != kv.Value[i].Value)) return false;
+                    }
+                }
+                return true;
+            }
+            catch { return false; }
+        }
+
         HostAction[] ActionsFor(byte pid)
         {
             HostAction[] arr;
@@ -4256,25 +4317,41 @@ namespace Rz3
             sb.AppendLine("=== Disabled clears the value ===");
             int probe = -1;
             for (int s = 0; s < HostTrigger.Count; s++) if (arr[s] != null && !arr[s].IsDisabled) { probe = s; break; }
+            // This check flips a row to Disabled on purpose, and choosing Disabled *wipes the
+            // saved value* (that is the behaviour being tested). Run against a table with real
+            // actions, that destroyed the user's own definition - measured 20.11.2026: running
+            // --tabtest on a machine with F13 = "thispc" removed the row from rz3_host.json.
+            // So the whole table is snapshotted first and put back afterwards, whatever happens.
+            Dictionary<byte, HostAction[]> snapshot = SnapshotHostTable();
+            bool invented = false;
             if (probe < 0)
             {
                 // make one so the check has something to clear
                 probe = 0;
                 arr[0].Kind = HostKinds.Run;
                 arr[0].Value = "probe.exe";
+                invented = true;
             }
-            // The UI must be in sync with the table before the check reads a text box.
-            LoadHostPage();
-            Application.DoEvents();
-            string before = _hostValue[probe].Text;
-            _hostKind[probe].SelectedIndex = HostKinds.Disabled;
-            Application.DoEvents();
-            string after = _hostValue[probe].Text;
-            sb.AppendLine("  slot " + probe + ": before='" + before + "' after='" + after + "'" +
-                (after.Length == 0 ? "  CLEARED" : "  NOT CLEARED"));
-            HostAction[] arr2 = ActionsFor(_profile);
-            sb.AppendLine("  stored value='" + (arr2[probe] != null ? arr2[probe].Value : "?") + "'" +
-                (arr2[probe] != null && arr2[probe].Value.Length == 0 ? "  CLEARED" : "  NOT CLEARED"));
+            try
+            {
+                // The UI must be in sync with the table before the check reads a text box.
+                LoadHostPage();
+                Application.DoEvents();
+                string before = _hostValue[probe].Text;
+                _hostKind[probe].SelectedIndex = HostKinds.Disabled;
+                Application.DoEvents();
+                string after = _hostValue[probe].Text;
+                sb.AppendLine("  slot " + probe + ": before='" + before + "' after='" + after + "'" +
+                    (after.Length == 0 ? "  CLEARED" : "  NOT CLEARED"));
+                HostAction[] arr2 = ActionsFor(_profile);
+                sb.AppendLine("  stored value='" + (arr2[probe] != null ? arr2[probe].Value : "?") + "'" +
+                    (arr2[probe] != null && arr2[probe].Value.Length == 0 ? "  CLEARED" : "  NOT CLEARED"));
+            }
+            finally
+            {
+                RestoreHostTable(snapshot, invented ? (byte)_profile : (byte)255);
+                sb.AppendLine("  user table restored=" + (VerifyHostTable(snapshot) ? "ok" : "FAILED"));
+            }
 
             sb.AppendLine();
             sb.AppendLine("=== Buttons tab cue for a host trigger ===");
