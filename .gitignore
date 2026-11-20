@@ -1,0 +1,38 @@
+# Build output — never commit these
+dist/
+src/Rz3.exe
+src/Rz3_build_check.exe
+*.pdb
+*.mdb
+*.obj
+
+# Generated at build time from the version in src/Version.cs
+src/AssemblyInfo.g.cs
+
+# Local build/test scratch
+_test/
+*.log
+
+# Runtime state files (belong to the installed copy in %LOCALAPPDATA%\Rz3, not to the repo)
+rz3_host.json
+rz3_names.json
+rz3_dpi.json
+rz3_ui.json
+rz3_power.json
+rz3_rate_cal.json
+rz3_crash.log
+rz3_*test.txt
+rz3_*.txt
+rz3_icontest/
+
+# Inno Setup output
+installer/Output/
+*.iss.generated
+
+# IDE / editor
+.vs/
+.vscode/
+*.user
+*.suo
+Thumbs.db
+desktop.ini

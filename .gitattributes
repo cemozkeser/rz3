@@ -1,0 +1,16 @@
+# Normalise line endings so the repository is identical on every platform.
+# The C# sources are compiled by csc on Windows, which accepts LF; keeping them as LF in the
+# repository avoids whole-file diffs whenever a contributor's editor disagrees.
+* text=auto
+
+*.cs      text eol=lf
+*.md      text eol=lf
+*.iss     text eol=lf
+*.ps1     text eol=lf
+*.gitignore text eol=lf
+*.gitattributes text eol=lf
+
+# Binary files: never touch these.
+*.ico     binary
+*.exe     binary
+*.png     binary
