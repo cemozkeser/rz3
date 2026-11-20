@@ -51,6 +51,10 @@ The first version intended for use by people other than the author.
 - Unexpected errors now write a full stack trace to `rz3_crash.log` instead of showing a bare
   message box, so a bug report from another machine carries evidence.
 - The installed copy no longer forgets `rz3_power.json` during install.
+- **Key sequences with a spaced repeat count now work.** `tab x3` — the exact form the UI hint
+  and the docs have always advertised — used to fail with `unknown token: x3`, because the
+  sequence is split on spaces and the repeat suffix was accepted only when glued to its key
+  (`tabx3`). Both spellings work now, and a test pins it.
 
 ### Known limits at this version
 
